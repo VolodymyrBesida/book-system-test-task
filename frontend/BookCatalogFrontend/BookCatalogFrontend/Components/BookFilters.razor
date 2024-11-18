@@ -1,0 +1,81 @@
+﻿<div class="row mb-3">
+    <div class="col-md-4">
+        <input class="form-control" placeholder="Title" @bind="title" @oninput="(e) => UpdateProperty(e, titleParam)" />
+    </div>
+    <div class="col-md-4">
+        <input class="form-control" placeholder="Author" @bind="author" @oninput="(e) => UpdateProperty(e, authorParam)" />
+    </div>
+    <div class="col-md-4">
+        <input class="form-control" placeholder="Genre" @bind="genre" @oninput="(e) => UpdateProperty(e, genreParam)" />
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-3">
+        <label>Current Page: @currentPage</label>
+        <input class="form-control" type="number" min="1" value="@currentPage" @oninput="UpdateCurrentPage" />
+    </div>
+    <div class="col-md-3">
+        <label>Items Per Page</label>
+        <select class="form-control" @bind="pageSize" @oninput="OnPageSizeChanged">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="30">30</option>
+            <option value="50">50</option>
+        </select>
+    </div>
+</div>
+
+@code {
+    private string? title;
+    private string? author;
+    private string? genre;
+
+    private string titleParam => "title";
+    private string authorParam => "authorParam";
+    private string genreParam => "genreParam";
+
+    private int pageSize = 10;
+    private int currentPage = 1;
+
+    [Parameter]
+    public EventCallback<(string? Title, string? Author, string? Genre, int PageSize, int CurrentPage)> OnFilterChanged { get; set; }
+
+    private async Task ApplyFilter()
+    {
+        await OnFilterChanged.InvokeAsync((title, author, genre, pageSize, currentPage));
+    }
+
+    private async void OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newPageSize))
+        {
+            pageSize = newPageSize;
+            await ApplyFilter();
+        }
+    }
+
+    private async Task UpdateProperty(ChangeEventArgs e, string propertyName)
+    {
+        switch (propertyName)
+        {
+            case "title":
+                title = e.Value?.ToString();
+                break;
+            case "author":
+                author = e.Value?.ToString();
+                break;
+            case "genre":
+                genre = e.Value?.ToString();
+                break;
+        }
+        await ApplyFilter();
+    }
+
+    private async void UpdateCurrentPage(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newPage))
+            currentPage = newPage < 1 ? 1 : newPage;
+        await ApplyFilter();
+    }
+}

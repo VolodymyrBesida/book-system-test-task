@@ -1,0 +1,81 @@
+﻿@page "/"
+@using BookCatalogFrontend.Models
+@inject HttpClient Http
+@inject NavigationManager NavManager
+
+<h3>Book Catalog</h3>
+
+<BookFilters OnFilterChanged="ApplyFilter" />
+<BookTable Books="filteredBooks" OnEdit="EditBook" OnDelete="DeleteBook" />
+
+<button class="btn btn-primary mt-3" @onclick="AddBook">Add New Book</button>
+
+@code {
+    private List<Book> books = new();
+    private List<Book> filteredBooks = new();
+
+    private string? filterTitle;
+    private string? filterAuthor;
+    private string? filterGenre;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private string sortField = "title";
+    private bool ascending = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        books = await Http.GetFromJsonAsync<List<Book>>("/api/books");
+        filteredBooks = books;
+    }
+
+    private async Task ApplyFilter((string? Title, string? Author, string? Genre, int PageSize, int CurrentPage) filters)
+    {
+        filterTitle = filters.Title;
+        filterAuthor = filters.Author;
+        filterGenre = filters.Genre;
+        pageSize = filters.PageSize;
+        currentPage = filters.CurrentPage;
+
+        var queryString = BuildQueryString();
+        var booksResponse = await Http.GetFromJsonAsync<List<Book>>($"/api/books?{queryString}");
+
+        filteredBooks = booksResponse ?? new List<Book>();
+    }
+
+    private void AddBook() => NavManager.NavigateTo("/add");
+
+    private void EditBook(Guid id) => NavManager.NavigateTo($"/edit/{id}");
+
+    private async Task DeleteBook(Guid id)
+    {
+        await Http.DeleteAsync($"/api/books/{id}");
+        books.RemoveAll(b => b.Id == id);
+        filteredBooks.RemoveAll(b => b.Id == id);
+    }
+
+    private string BuildQueryString()
+    {
+        var queryString = $"page={currentPage}&pageSize={pageSize}&sortField={sortField}&ascending={ascending.ToString().ToLower()}";
+
+        if (!string.IsNullOrEmpty(filterTitle))
+        {
+            queryString += $"&title={Uri.EscapeDataString(filterTitle)}";
+        }
+        if (!string.IsNullOrEmpty(filterAuthor))
+        {
+            queryString += $"&author={Uri.EscapeDataString(filterAuthor)}";
+        }
+        if (!string.IsNullOrEmpty(filterGenre))
+        {
+            queryString += $"&genre={Uri.EscapeDataString(filterGenre)}";
+        }
+
+        return queryString;
+    }
+
+    public class PagedBooksResponse
+    {
+        public List<Book> Books { get; set; } = new List<Book>();
+        public int TotalCount { get; set; }
+    }
+}

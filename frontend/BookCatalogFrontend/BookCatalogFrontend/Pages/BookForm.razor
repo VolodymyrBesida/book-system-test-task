@@ -1,0 +1,132 @@
+﻿@page "/add"
+@page "/edit/{id:Guid}"
+@using BookCatalogFrontend.Models
+@inject HttpClient Http
+@inject NavigationManager NavManager
+
+<h3>@(isAddQuery ? "Add Book" : "Edit Book")</h3>
+
+<EditForm Model="book" OnValidSubmit="SaveBook">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label for="title" class="form-label">Title</label>
+        <InputText id="title" class="form-control" @bind-Value="book.Title" />
+        <ValidationMessage For="@(() => book.Title)" />
+    </div>
+    <div class="mb-3">
+        <label for="author" class="form-label">Author</label>
+        <InputText id="author" class="form-control" @bind-Value="book.Author" />
+        <ValidationMessage For="@(() => book.Author)" />
+    </div>
+    <div class="mb-3">
+        <label for="genre" class="form-label">Genre</label>
+        <InputText id="genre" class="form-control" @bind-Value="book.Genre" />
+        <ValidationMessage For="@(() => book.Genre)" />
+    </div>
+
+    @if (isAddQuery)
+    {
+        <div class="mb-3">
+            @if (!string.IsNullOrEmpty(bulkUploadErrorMessage))
+            {
+                <div class="alert alert-danger">@bulkUploadErrorMessage</div>
+            }
+            <label for="csvUpload" class="form-label">Upload CSV</label>
+            <InputFile id="csvUpload" class="form-control" OnChange="HandleFileSelected" />
+        </div>
+
+    }
+
+    <button type="submit" class="btn btn-primary">@(isAddQuery ? "Add Book" : "Update Book")</button>
+    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@code {
+    [Parameter]
+    public string? id { get; set; }
+    private Book book = new();
+    private bool isAddQuery = true;
+    private bool isUploadingCsv = false;
+    private string bulkUploadErrorMessage = string.Empty;
+    const long maxFileSize = 10 * 1024 * 1024; // 10MB
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Guid.TryParse(id, out Guid parsedId))
+        {
+            book = await Http.GetFromJsonAsync<Book>($"/api/books/{id}");
+            isAddQuery = false;
+        }
+        else
+            book = new Book();
+
+    }
+
+    private async Task SaveBook()
+    {
+        if (isAddQuery)
+            await Http.PostAsJsonAsync("/api/books", book);
+        else
+        {
+            var parsedId = Guid.Parse(id);
+            await Http.PutAsJsonAsync($"/api/books/{parsedId}", book);
+        }
+
+        NavManager.NavigateTo("/");
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        isUploadingCsv = true;
+
+        if (file is null || file.ContentType is not "text/csv")
+        {
+            SetError("Please select a valid CSV file.");
+            return;
+        }
+
+        if (file.Size > maxFileSize)
+        {
+            SetError("The file size exceeds the 10MB limit. Please upload a smaller file.");
+            return;
+        }
+
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var fileContent = new StreamContent(file.OpenReadStream(maxAllowedSize: maxFileSize));
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/csv");
+
+            content.Add(fileContent, "file", file.Name);
+
+            var response = await Http.PostAsync("/api/books/upload", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                SetError("File upload failed. Please try again.");
+                return;
+            }
+
+            NavManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            SetError($"An error occurred while uploading the file: {ex.Message}");
+        }
+        finally
+        {
+            isUploadingCsv = false;
+        }
+    }
+
+    void SetError(string message)
+    {
+        bulkUploadErrorMessage = message;
+        isUploadingCsv = false;
+    }
+
+    private void Cancel() => NavManager.NavigateTo("/");
+}

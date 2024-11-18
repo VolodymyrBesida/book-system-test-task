@@ -1,0 +1,11 @@
+# .NET Core build files
+bin/
+obj/
+
+# ASP.NET Core
+wwwroot/
+
+# User-specific files
+.vs/
+.idea/
+.vscode/

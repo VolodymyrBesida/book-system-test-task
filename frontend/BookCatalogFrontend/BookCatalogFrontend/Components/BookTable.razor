@@ -1,0 +1,36 @@
+﻿@using BookCatalogFrontend.Models
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Genre</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var book in Books)
+        {
+            <tr>
+                <td>@book.Title</td>
+                <td>@book.Author</td>
+                <td>@book.Genre</td>
+                <td>
+                    <button class="btn btn-sm btn-warning" @onclick="() => OnEdit.InvokeAsync(book.Id)">Edit</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => OnDelete.InvokeAsync(book.Id)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter]
+    public List<Book> Books { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<Guid> OnEdit { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OnDelete { get; set; }
+}
