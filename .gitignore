@@ -9,3 +9,14 @@ wwwroot/
 .vs/
 .idea/
 .vscode/
+
+
+backend/BookCatalogManagement/BookCatalogManagement.sln
+
+backend/BookCatalogManagement/BookCatalogManagement.*/.vs/
+backend/BookCatalogManagement/BookCatalogManagement.*/bin/
+backend/BookCatalogManagement/BookCatalogManagement.*/obj/
+
+frontend/BookCatalogFrontend.sln
+frontend/BookCatalogFrontend.bin
+frontend/BookCatalogFrontend.obj
